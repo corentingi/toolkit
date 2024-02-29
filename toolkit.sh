@@ -8,7 +8,12 @@ db_command_group() {
     # Assigning command line arguments and environment variables
     command=$1
     database_name=${2:-$DB_NAME}
-    backup_file=${3:-"${database_name}_backup.sql"}
+
+    backup_file_name="${database_name}_backup.sql"
+    backup_path=${3:-$backup_file_name}
+    if [ -d $backup_path ]; then
+        backup_path=${3}/${backup_file_name}
+    fi
 
     mysql_arguments=""
     [[ -z "$DB_HOST" ]] || mysql_arguments+=" -h "$DB_HOST
@@ -19,14 +24,19 @@ db_command_group() {
     # Function for backing up the database
     backup_database() {
         echo "Starting backup for database $database_name..."
-        mysqldump $mysql_arguments $database_name > "${backup_file}"
-        echo "Backup completed: ${backup_file}"
+        mysqldump $mysql_arguments $database_name > "${backup_path}"
+        echo "Backup completed: ${backup_path}"
     }
 
     # Function for restoring the database
     restore_database() {
+        if [ ! -r $backup_path ]; then
+            echo "Can't read from file: ${backup_path}"
+            exit 1
+        fi
+
         echo "Starting restore for database $database_name..."
-        mysql $mysql_arguments $database_name < "${backup_file}"
+        mysql $mysql_arguments $database_name < "${backup_path}"
         echo "Restore completed for $database_name"
     }
 
