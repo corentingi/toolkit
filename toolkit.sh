@@ -54,6 +54,113 @@ db_command_group() {
     esac
 }
 
+
+magick_command_directory() {
+    source_directory=$1
+    dest_directory=$2
+    commands=${@:3}
+
+    if [ ! -d $source_directory ]; then
+        echo "Source directory doesn't exist"
+        exit 1
+    fi
+    if [ ! -d $dest_directory ]; then
+        echo "Destination directory doesn't exist"
+        exit 1
+    fi
+
+    for src_file in $source_directory; do
+        # Extract file name without extension
+        filename=$(basename -- "$svg_file")
+        extension="${filename##*.}"
+        filename_no_ext="${filename%.*}"
+
+        dest_file=$dest_directory/${filename_no_ext}-converted.${extension}
+        magick $src_file $commands $dest_file
+
+        if [ $? -ne 0 ]; then
+            echo "Error resizing $src_file"
+            exit 1
+        else
+            echo "Applied $commands to $dest_file"
+        fi
+    done
+}
+
+
+magick_command_group() {
+    if ! command -v magick &> /dev/null; then
+        echo "Image Magick is not installed"
+        exit 1
+    fi
+
+    magick_batch() {
+        source_directory=$1
+        dest_directory=$2
+        dest_extension=$3
+        commands=${@:4}
+
+        if [ ! -d $source_directory ]; then
+            echo "Source directory doesn't exist"
+            exit 1
+        fi
+        if [ ! -d $dest_directory ]; then
+            echo "Destination directory doesn't exist"
+            exit 1
+        fi
+
+        for src_file in $source_directory/*; do
+            # Extract file name without extension
+            filename=$(basename -- "$src_file")
+            filename_no_ext="${filename%.*}"
+
+            dest_file=$dest_directory/${filename_no_ext}-converted.${dest_extension}
+            magick $src_file $commands $dest_file
+
+            if [ $? -ne 0 ]; then
+                echo "Error resizing $src_file"
+                exit 1
+            else
+                echo "Applied $commands to $dest_file"
+            fi
+        done
+    }
+
+    magick_inplace() {
+        source_directory=$1
+        commands=${@:4}
+
+        if [ ! -d $source_directory ]; then
+            echo "Source directory doesn't exist"
+            exit 1
+        fi
+
+        for src_file in $source_directory/*; do
+            magick $src_file $commands $src_file
+
+            if [ $? -ne 0 ]; then
+                echo "Error resizing $src_file"
+                exit 1
+            else
+                echo "Applied $commands to $src_file"
+            fi
+        done
+    }
+
+    # Check for the command and call the appropriate function
+    case $1 in
+        batch)
+            magick_batch ${@:2}
+            ;;
+        inplace)
+            magick_inplace ${@:2}
+            ;;
+        *)
+            echo "Invalid command. Use 'install' or 'uninstall'."
+            ;;
+    esac
+}
+
 self_command_group() {
     command_name="toolkit"
 
@@ -87,10 +194,19 @@ case $command in
     db)
         db_command_group ${@:2}
         ;;
+    magick)
+        magick_command_group ${@:2}
+        ;;
     self)
         self_command_group ${@:2}
         ;;
     *)
-        echo "Invalid command. Use 'db'."
+        cat <<EOF
+usage : toolkit <command> [<args>]
+
+db: Handle database dump and restore actions
+magick: Handle images with batch actions
+self: Manage this tool
+EOF
         ;;
 esac
