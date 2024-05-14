@@ -7,13 +7,6 @@ db_command_group() {
 
     # Assigning command line arguments and environment variables
     command=$1
-    database_name=${2:-$DB_NAME}
-
-    backup_file_name="${database_name}_backup.sql"
-    backup_path=${3:-$backup_file_name}
-    if [ -d $backup_path ]; then
-        backup_path=${3}/${backup_file_name}
-    fi
 
     mysql_arguments=""
     [[ -z "$DB_HOST" ]] || mysql_arguments+=" -h "$DB_HOST
@@ -23,6 +16,19 @@ db_command_group() {
 
     # Function for backing up the database
     backup_database() {
+        database_name=${1:-$DB_NAME}
+        backup_path=${2}
+
+        # default name
+        current_datetime=$(date -u +"%Y-%m-%dT%H-%M-%SZ")
+        default_file_name="${current_datetime}_${database_name}_backup.sql"
+
+        if [ -z $backup_path ]; then
+            backup_path=$default_file_name
+        elif [ -d $backup_path ]; then
+            backup_path=${backup_path}/${default_file_name}
+        fi
+
         echo "Starting backup for database $database_name..."
         mysqldump $mysql_arguments $database_name > "${backup_path}"
         echo "Backup completed: ${backup_path}"
@@ -30,6 +36,9 @@ db_command_group() {
 
     # Function for restoring the database
     restore_database() {
+        database_name=${1:-$DB_NAME}
+        backup_path=${2}
+
         if [ ! -r $backup_path ]; then
             echo "Can't read from file: ${backup_path}"
             exit 1
