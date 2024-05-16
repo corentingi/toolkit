@@ -108,6 +108,7 @@ magick_command_group() {
         dest_directory=$2
         dest_extension=$3
         commands=${@:4}
+        suffix=${TOOLKIT_CONVERTED_SUFFIX:-"converted"}
 
         if [ ! -d $source_directory ]; then
             echo "Source directory doesn't exist"
@@ -119,12 +120,17 @@ magick_command_group() {
         fi
 
         for src_file in $source_directory/*; do
+            if [ ! -f "$src_file" ]; then
+                continue
+            fi
+
             # Extract file name without extension
             filename=$(basename -- "$src_file")
             filename_no_ext="${filename%.*}"
+            slug_file_name=$(echo "$filename_no_ext" | iconv -cs -f utf8 -t 'ascii//TRANSLIT//IGNORE' | sed -e 's/[^a-zA-Z0-9][^a-zA-Z0-9]*/-/g' | tr '[:upper:]' '[:lower:]')
 
-            dest_file=$dest_directory/${filename_no_ext}-converted.${dest_extension}
-            magick $src_file $commands $dest_file
+            dest_file=$dest_directory/${slug_file_name}-${suffix}.${dest_extension}
+            magick "$src_file" $commands "$dest_file"
 
             if [ $? -ne 0 ]; then
                 echo "Error resizing $src_file"
