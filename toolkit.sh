@@ -14,6 +14,10 @@ db_command_group() {
     [[ -z "$DB_USER" ]] || mysql_arguments+=" -u "$DB_USER
     [[ -z "$DB_PASSWORD" ]] || mysql_arguments+=" -p"$DB_PASSWORD
 
+    list_database() {
+        mysql $mysql_arguments -e "SHOW DATABASES;"
+    }
+
     # Function for backing up the database
     backup_database() {
         database_name=${1:-$DB_NAME}
@@ -51,6 +55,9 @@ db_command_group() {
 
     # Check for the command and call the appropriate function
     case $command in
+        list)
+            list_database
+            ;;
         backup)
             backup_database ${@:2}
             ;;
